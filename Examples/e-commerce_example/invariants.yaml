@@ -1,0 +1,179 @@
+# 电子商务系统不变量和约束条件
+# 版本: 1.0.0
+
+# 这个文件定义了电子商务系统必须始终满足的不变量和约束条件
+# 这些条件用于验证系统的正确性，并在开发和演进过程中保持一致性
+
+# ======== 数据完整性约束 ========
+data_integrity:
+  - name: "产品价格有效性"
+    description: "产品价格必须大于零且精度不超过2位小数"
+    validation: "对于任何Product实例p，p.price > 0 且 p.price的小数位数 <= 2"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+  - name: "库存非负性"
+    description: "产品库存不能为负数"
+    validation: "对于任何Product实例p，p.inventory >= 0"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+  - name: "订单项一致性"
+    description: "订单项的小计必须等于单价乘以数量"
+    validation: "对于任何OrderItem实例oi，oi.subtotal = oi.price * oi.quantity"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+  - name: "订单总额一致性"
+    description: "订单总额必须等于所有订单项小计的总和"
+    validation: "对于任何Order实例o，o.totalAmount = sum(o.items[].subtotal)"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+# ======== 业务规则约束 ========
+business_rules:
+  - name: "产品状态一致性"
+    description: "产品状态必须与库存一致"
+    validation: "当Product.inventory = 0时，Product.status必须为OUT_OF_STOCK；当Product.inventory > 0时，Product.status不能为OUT_OF_STOCK"
+    severity: HIGH
+    enforcement: APPLICATION
+
+  - name: "订单状态转换有效性"
+    description: "订单状态转换必须遵循预定义的路径"
+    validation: "订单状态转换必须遵循kernel.dsl中定义的状态转换规则"
+    severity: HIGH
+    enforcement: APPLICATION
+
+  - name: "订单取消限制"
+    description: "只有PENDING或PAID状态的订单可以被取消"
+    validation: "只有当Order.status为PENDING或PAID时，才能将其更新为CANCELLED"
+    severity: HIGH
+    enforcement: APPLICATION
+
+  - name: "用户订单关联"
+    description: "订单必须关联到有效的用户"
+    validation: "对于任何Order实例o，必须存在一个状态为ACTIVE的User实例u，使得o.userId = u.id"
+    severity: HIGH
+    enforcement: APPLICATION
+
+# ======== 系统行为约束 ========
+system_behavior:
+  - name: "创建订单原子性"
+    description: "创建订单操作必须是原子的"
+    validation: "createOrder操作要么完全成功（创建订单、订单项并更新库存），要么完全失败"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+  - name: "库存更新原子性"
+    description: "库存更新操作必须是原子的"
+    validation: "updateProductInventory操作要么完全成功，要么完全失败"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+  - name: "并发订单处理"
+    description: "系统必须正确处理并发订单"
+    validation: "当多个订单同时请求相同产品时，系统必须确保库存一致性和订单有效性"
+    severity: HIGH
+    enforcement: SYSTEM
+
+  - name: "幂等性操作"
+    description: "标记为幂等的操作必须是幂等的"
+    validation: "对于标记为幂等的API操作，多次调用与调用一次的效果相同"
+    severity: MEDIUM
+    enforcement: APPLICATION
+
+# ======== 安全约束 ========
+security_constraints:
+  - name: "用户密码安全"
+    description: "用户密码必须安全存储"
+    validation: "用户密码必须使用强哈希算法（如bcrypt）加密存储，不得明文存储或使用弱哈希算法"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+  - name: "支付信息安全"
+    description: "支付信息必须安全处理"
+    validation: "信用卡号等敏感支付信息必须加密存储，且只显示部分信息（如最后4位）"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+  - name: "访问控制"
+    description: "用户只能访问自己的数据"
+    validation: "普通用户只能访问和修改自己的订单和账户信息，不能访问其他用户的数据"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+  - name: "API速率限制"
+    description: "API请求必须受到速率限制"
+    validation: "系统必须实施API速率限制，防止滥用和DoS攻击"
+    severity: HIGH
+    enforcement: SYSTEM
+
+# ======== 性能约束 ========
+performance_constraints:
+  - name: "API响应时间"
+    description: "API响应时间限制"
+    validation: "95%的API请求必须在200ms内完成，99%的API请求必须在500ms内完成"
+    severity: MEDIUM
+    enforcement: MONITORING
+
+  - name: "订单处理时间"
+    description: "订单处理时间限制"
+    validation: "90%的订单创建操作必须在1秒内完成"
+    severity: MEDIUM
+    enforcement: MONITORING
+
+  - name: "数据库查询性能"
+    description: "数据库查询性能限制"
+    validation: "95%的数据库查询必须在50ms内完成"
+    severity: MEDIUM
+    enforcement: MONITORING
+
+  - name: "并发用户支持"
+    description: "系统必须支持的并发用户数"
+    validation: "系统必须能够支持至少1000个并发用户而不降低性能"
+    severity: MEDIUM
+    enforcement: MONITORING
+
+# ======== 可用性约束 ========
+availability_constraints:
+  - name: "系统可用性"
+    description: "系统可用性要求"
+    validation: "系统可用性必须达到99.9%（每月最多43分钟的计划外停机时间）"
+    severity: HIGH
+    enforcement: MONITORING
+
+  - name: "故障恢复时间"
+    description: "系统从故障中恢复的时间要求"
+    validation: "系统必须能够在15分钟内从故障中恢复"
+    severity: HIGH
+    enforcement: MONITORING
+
+  - name: "数据持久性"
+    description: "数据持久性要求"
+    validation: "系统必须确保数据的持久性，防止数据丢失"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+# ======== 验证规则 ========
+validation_rules:
+  - name: "不变量验证频率"
+    description: "定义不同类型不变量的验证频率"
+    rules:
+      - "CRITICAL级别的不变量必须在每次操作前后验证"
+      - "HIGH级别的不变量必须在相关操作完成后验证"
+      - "MEDIUM级别的不变量可以通过定期批处理验证"
+
+  - name: "违反处理策略"
+    description: "定义违反不变量时的处理策略"
+    rules:
+      - "违反CRITICAL级别不变量时必须立即回滚操作并记录错误"
+      - "违反HIGH级别不变量时必须记录错误并触发警报"
+      - "违反MEDIUM级别不变量时必须记录警告并在下一个维护周期修复"
+
+  - name: "验证工具"
+    description: "用于验证不变量的工具和方法"
+    rules:
+      - "使用单元测试验证代码级不变量"
+      - "使用集成测试验证系统级不变量"
+      - "使用运行时断言验证关键不变量"
+      - "使用数据库约束验证数据完整性不变量"

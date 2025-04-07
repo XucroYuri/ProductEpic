@@ -1,0 +1,163 @@
+# 模块依赖关系定义
+# 版本: 1.0.0
+
+# 这个文件定义了系统中各模块之间的依赖关系
+# 依赖关系定义确保模块的正确加载顺序和版本兼容性
+
+# ======== 依赖规则 ========
+dependency_rules:
+  - name: "版本兼容性"
+    description: "模块版本必须与其依赖的模块版本兼容"
+    validation: "使用语义化版本规则验证版本兼容性"
+  
+  - name: "循环依赖检测"
+    description: "禁止模块之间形成循环依赖"
+    validation: "使用依赖图分析检测循环依赖"
+  
+  - name: "核心兼容性"
+    description: "所有模块必须与当前核心版本兼容"
+    validation: "模块声明的core依赖版本范围必须包含当前核心版本"
+
+# ======== 加载顺序 ========
+loading_order:
+  strategy: "依赖拓扑排序"
+  description: "根据模块间依赖关系进行拓扑排序，确定加载顺序"
+  fallback: "按模块优先级加载"
+
+# ======== 模块优先级 ========
+module_priorities:
+  - priority: 100
+    modules: ["基础模块", "认证模块"]
+    description: "系统基础功能模块，最先加载"
+  
+  - priority: 200
+    modules: ["业务核心模块"]
+    description: "核心业务功能模块，次优先加载"
+  
+  - priority: 300
+    modules: ["扩展功能模块"]
+    description: "扩展功能模块，在核心模块之后加载"
+  
+  - priority: 400
+    modules: ["UI模块", "报表模块"]
+    description: "界面和报表模块，最后加载"
+
+# ======== 版本约束 ========
+version_constraints:
+  core:
+    current_version: "1.0.0"
+    compatibility: "^1.0.0"
+    description: "当前核心版本及兼容性范围"
+  
+  modules:
+    - name: "认证模块"
+      version: "1.0.0"
+      compatibility: "^1.0.0"
+    
+    - name: "业务核心模块"
+      version: "1.0.0"
+      compatibility: "^1.0.0"
+
+# ======== 依赖解析 ========
+dependency_resolution:
+  strategy: "最新兼容版本"
+  description: "当存在多个兼容版本时，选择最新的兼容版本"
+  conflict_resolution: "用户选择"
+  description: "当依赖冲突无法自动解决时，提示用户选择"
+
+# ======== 可选依赖 ========
+optional_dependencies:
+  - module: "报表模块"
+    optional_dependencies: ["数据导出模块"]
+    fallback_behavior: "禁用相关功能"
+  
+  - module: "通知模块"
+    optional_dependencies: ["邮件模块", "短信模块"]
+    fallback_behavior: "使用默认通知方式"
+
+# ======== 模块组 ========
+module_groups:
+  - name: "核心组件"
+    modules: ["认证模块", "业务核心模块"]
+    description: "系统核心组件，必须安装"
+  
+  - name: "扩展组件"
+    modules: ["报表模块", "通知模块", "数据导出模块"]
+    description: "系统扩展组件，可选安装"
+  
+  - name: "UI组件"
+    modules: ["管理界面模块", "用户界面模块"]
+    description: "系统界面组件，可选安装"
+
+# ======== 依赖图 ========
+dependency_graph:
+  - module: "认证模块"
+    dependencies: []
+    dependents: ["业务核心模块", "管理界面模块", "用户界面模块"]
+  
+  - module: "业务核心模块"
+    dependencies: ["认证模块"]
+    dependents: ["报表模块", "通知模块", "数据导出模块"]
+  
+  - module: "报表模块"
+    dependencies: ["业务核心模块"]
+    dependents: []
+    optional_dependencies: ["数据导出模块"]
+  
+  - module: "通知模块"
+    dependencies: ["业务核心模块"]
+    dependents: []
+    optional_dependencies: ["邮件模块", "短信模块"]
+  
+  - module: "数据导出模块"
+    dependencies: ["业务核心模块"]
+    dependents: []
+  
+  - module: "管理界面模块"
+    dependencies: ["认证模块"]
+    dependents: []
+  
+  - module: "用户界面模块"
+    dependencies: ["认证模块"]
+    dependents: []
+
+# ======== 兼容性矩阵 ========
+compatibility_matrix:
+  - module: "认证模块"
+    versions:
+      - version: "1.0.x"
+        compatible_with:
+          core: "^1.0.0"
+          modules: {}
+      - version: "1.1.x"
+        compatible_with:
+          core: "^1.0.0"
+          modules: {}
+  
+  - module: "业务核心模块"
+    versions:
+      - version: "1.0.x"
+        compatible_with:
+          core: "^1.0.0"
+          modules:
+            "认证模块": "^1.0.0"
+
+# ======== 升级路径 ========
+upgrade_paths:
+  - from_version: "1.0.0"
+    to_version: "1.1.0"
+    modules:
+      - name: "认证模块"
+        from: "1.0.0"
+        to: "1.1.0"
+        breaking_changes: false
+      - name: "业务核心模块"
+        from: "1.0.0"
+        to: "1.0.1"
+        breaking_changes: false
+    migration_steps:
+      - "更新核心版本"
+      - "更新认证模块"
+      - "更新业务核心模块"
+      - "运行数据迁移脚本"
+      - "更新配置文件"}}]}

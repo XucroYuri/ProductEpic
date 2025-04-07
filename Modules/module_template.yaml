@@ -1,0 +1,200 @@
+# 模块定义模板
+# 版本: 1.0.0
+
+# 这个文件定义了功能模块的标准结构
+# 新模块应基于此模板创建，确保模块结构的一致性和可扩展性
+
+# ======== 模块基本信息 ========
+module_info:
+  name: "ModuleName"                # 模块名称，使用PascalCase命名
+  version: "1.0.0"                  # 模块版本，遵循语义化版本规范
+  description: "模块功能描述"        # 简要描述模块的功能和用途
+  author: "作者信息"                # 模块作者
+  dependencies:                     # 模块依赖
+    core: "^1.0.0"                 # 核心版本要求
+    modules: []                     # 依赖的其他模块
+
+# ======== 模块实体定义 ========
+entities:
+  - name: "ModuleEntity"            # 模块实体名称
+    description: "模块实体描述"      # 实体描述
+    attributes:                     # 实体属性
+      - name: "id"
+        type: "UUID"
+        required: true
+        description: "唯一标识符"
+      - name: "name"
+        type: "String"
+        required: true
+        description: "实体名称"
+      - name: "status"
+        type: "Enum"
+        values: ["ACTIVE", "INACTIVE"]
+        default: "ACTIVE"
+        description: "实体状态"
+      - name: "createdAt"
+        type: "Timestamp"
+        required: true
+        description: "创建时间"
+
+# ======== 模块关系定义 ========
+relationships:
+  - type: "ManyToOne"               # 关系类型
+    source: "ModuleEntity"          # 源实体
+    target: "Entity1"               # 目标实体（核心实体或其他模块实体）
+    sourceAttribute: "entity1Id"    # 源实体中的外键属性
+    targetAttribute: "id"           # 目标实体中的主键属性
+    description: "ModuleEntity与Entity1的关系描述"
+
+# ======== 模块操作定义 ========
+operations:
+  - name: "createModuleEntity"      # 操作名称
+    description: "创建ModuleEntity实例" # 操作描述
+    input:                          # 输入参数
+      - name: "name"
+        type: "String"
+        required: true
+      - name: "entity1Id"
+        type: "UUID"
+        required: true
+      - name: "status"
+        type: "Enum"
+        values: ["ACTIVE", "INACTIVE"]
+        required: false
+        default: "ACTIVE"
+    output:                         # 输出结果
+      type: "ModuleEntity"
+    preconditions:                  # 前置条件
+      - "entity1Id必须对应一个存在的Entity1"
+      - "name不能为空"
+    postconditions:                 # 后置条件
+      - "返回新创建的ModuleEntity实例"
+      - "ModuleEntity.id被正确生成"
+      - "ModuleEntity.createdAt被设置为当前时间"
+
+# ======== 模块业务规则 ========
+rules:
+  - name: "ModuleEntity状态规则"     # 规则名称
+    description: "定义ModuleEntity状态的业务规则" # 规则描述
+    conditions:                     # 规则条件
+      - "ModuleEntity只能在ACTIVE和INACTIVE状态之间切换"
+      - "当关联的Entity1状态为INACTIVE时，ModuleEntity状态必须为INACTIVE"
+
+# ======== 模块API扩展 ========
+api_extensions:
+  - path: "/module-entity"          # API路径
+    methods:                        # HTTP方法
+      - method: "GET"
+        summary: "获取ModuleEntity列表"
+        description: "分页获取ModuleEntity列表"
+        parameters:                 # 请求参数
+          - name: "page"
+            in: "query"
+            type: "integer"
+            default: 1
+          - name: "limit"
+            in: "query"
+            type: "integer"
+            default: 10
+          - name: "status"
+            in: "query"
+            type: "string"
+            enum: ["ACTIVE", "INACTIVE"]
+        responses:                  # 响应定义
+          - status: 200
+            description: "成功获取ModuleEntity列表"
+            schema: "ModuleEntityList"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+        required_permissions: ["read:module-entity"] # 所需权限
+
+# ======== 模块UI扩展 ========
+ui_extensions:
+  - name: "ModuleEntityList"        # UI组件名称
+    type: "page"                    # 组件类型
+    template: "EntityListTemplate"  # 使用的模板
+    properties:                     # 组件属性
+      entity: "ModuleEntity"
+      columns: ["id", "name", "status", "createdAt"]
+      filters: ["status"]
+
+  - name: "ModuleEntityDetail"      # UI组件名称
+    type: "page"                    # 组件类型
+    template: "EntityDetailTemplate" # 使用的模板
+    properties:                     # 组件属性
+      entity: "ModuleEntity"
+      fields: ["id", "name", "status", "entity1Id", "createdAt"]
+
+# ======== 模块扩展点 ========
+extension_points:
+  - name: "beforeModuleEntityCreate" # 扩展点名称
+    description: "ModuleEntity创建前的扩展点" # 扩展点描述
+    trigger: "createModuleEntity操作执行前" # 触发条件
+    interface:                      # 接口定义
+      - name: "validate"
+        input: ["moduleEntityData"]
+        output: "Boolean"
+
+  - name: "afterModuleEntityCreate"  # 扩展点名称
+    description: "ModuleEntity创建后的扩展点" # 扩展点描述
+    trigger: "createModuleEntity操作执行后" # 触发条件
+    interface:                      # 接口定义
+      - name: "process"
+        input: ["moduleEntity"]
+        output: "void"
+
+# ======== 模块配置选项 ========
+config_options:
+  - name: "enableFeatureX"          # 配置选项名称
+    type: "Boolean"                 # 选项类型
+    default: false                  # 默认值
+    description: "是否启用功能X"      # 选项描述
+
+  - name: "maxItemsPerPage"         # 配置选项名称
+    type: "Integer"                 # 选项类型
+    default: 50                     # 默认值
+    min: 10                         # 最小值
+    max: 100                        # 最大值
+    description: "每页最大项目数"     # 选项描述
+
+# ======== 模块测试规范 ========
+test_specifications:
+  unit_tests:                       # 单元测试
+    - name: "testCreateModuleEntity"
+      description: "测试创建ModuleEntity的功能"
+      scenarios:                    # 测试场景
+        - name: "有效输入"
+          input:
+            name: "测试实体"
+            entity1Id: "有效ID"
+          expected: "成功创建ModuleEntity"
+        - name: "无效entity1Id"
+          input:
+            name: "测试实体"
+            entity1Id: "无效ID"
+          expected: "返回错误:无效的entity1Id"
+
+  integration_tests:                # 集成测试
+    - name: "testModuleEntityAPI"
+      description: "测试ModuleEntity API的功能"
+      scenarios:                    # 测试场景
+        - name: "获取列表"
+          steps:
+            - "创建测试数据"
+            - "调用GET /module-entity"
+            - "验证返回结果"
+
+# ======== 模块文档 ========
+documentation:
+  sections:                         # 文档章节
+    - title: "概述"
+      content: "模块功能概述和使用场景"
+    - title: "安装和配置"
+      content: "模块的安装步骤和配置选项"
+    - title: "API参考"
+      content: "模块API的详细说明"
+    - title: "UI组件"
+      content: "模块UI组件的使用方法"
+    - title: "最佳实践"
+      content: "使用模块的最佳实践和示例"

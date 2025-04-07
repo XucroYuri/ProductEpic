@@ -1,0 +1,860 @@
+# 电子商务系统API规范
+# 版本: 1.0.0
+
+# 这个文件定义了电子商务系统的API接口规范
+# API接口是系统与外部世界交互的主要方式，需要保持稳定性和向后兼容性
+
+# ======== API基本信息 ========
+api_info:
+  title: "电子商务系统API"
+  description: "电子商务系统的RESTful API接口规范"
+  version: "1.0.0"
+  base_path: "/api/v1"
+  formats: ["JSON"]
+  default_format: "JSON"
+
+# ======== 认证与授权 ========
+authentication:
+  methods:
+    - name: "JWT"
+      description: "基于JWT的认证"
+      header: "Authorization"
+      format: "Bearer {token}"
+      expiration: "24h"
+    
+    - name: "API Key"
+      description: "基于API Key的认证（用于第三方集成）"
+      header: "X-API-Key"
+      format: "{api_key}"
+
+authorization:
+  roles:
+    - name: "admin"
+      description: "管理员角色，拥有所有权限"
+    
+    - name: "customer"
+      description: "客户角色，拥有与自身相关的资源权限"
+    
+    - name: "guest"
+      description: "访客角色，只拥有公开资源的读取权限"
+  
+  permissions:
+    - name: "read:products"
+      description: "读取产品信息的权限"
+    
+    - name: "write:products"
+      description: "创建和修改产品的权限"
+    
+    - name: "read:orders"
+      description: "读取订单信息的权限"
+    
+    - name: "write:orders"
+      description: "创建和修改订单的权限"
+    
+    - name: "read:users"
+      description: "读取用户信息的权限"
+    
+    - name: "write:users"
+      description: "创建和修改用户的权限"
+
+# ======== 端点定义 ========
+endpoints:
+  # 产品相关端点
+  - path: "/products"
+    methods:
+      - method: "GET"
+        summary: "获取产品列表"
+        description: "分页获取产品列表，支持筛选和排序"
+        parameters:
+          - name: "page"
+            in: "query"
+            type: "integer"
+            default: 1
+            description: "页码"
+          - name: "limit"
+            in: "query"
+            type: "integer"
+            default: 10
+            description: "每页数量"
+          - name: "status"
+            in: "query"
+            type: "string"
+            enum: ["ACTIVE", "INACTIVE", "OUT_OF_STOCK"]
+            description: "按状态筛选"
+          - name: "sort"
+            in: "query"
+            type: "string"
+            default: "createdAt:desc"
+            description: "排序字段和方向，格式为field:direction"
+        responses:
+          - status: 200
+            description: "成功获取产品列表"
+            schema: "ProductList"
+          - status: 400
+            description: "请求参数错误"
+            schema: "Error"
+        required_permissions: ["read:products"]
+        rate_limit: "100/minute"
+        caching: "max-age=60"
+      
+      - method: "POST"
+        summary: "创建产品"
+        description: "创建新的产品"
+        parameters:
+          - name: "body"
+            in: "body"
+            schema: "ProductCreate"
+            description: "产品创建参数"
+        responses:
+          - status: 201
+            description: "成功创建产品"
+            schema: "Product"
+          - status: 400
+            description: "请求参数错误"
+            schema: "Error"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+          - status: 403
+            description: "权限不足"
+            schema: "Error"
+        required_permissions: ["write:products"]
+        rate_limit: "50/minute"
+        idempotent: false
+  
+  - path: "/products/{id}"
+    methods:
+      - method: "GET"
+        summary: "获取产品详情"
+        description: "根据ID获取产品详情"
+        parameters:
+          - name: "id"
+            in: "path"
+            type: "string"
+            format: "uuid"
+            required: true
+            description: "产品ID"
+        responses:
+          - status: 200
+            description: "成功获取产品详情"
+            schema: "Product"
+          - status: 404
+            description: "产品不存在"
+            schema: "Error"
+        required_permissions: ["read:products"]
+        caching: "max-age=30"
+      
+      - method: "PUT"
+        summary: "更新产品"
+        description: "更新指定ID的产品"
+        parameters:
+          - name: "id"
+            in: "path"
+            type: "string"
+            format: "uuid"
+            required: true
+            description: "产品ID"
+          - name: "body"
+            in: "body"
+            schema: "ProductUpdate"
+            description: "产品更新参数"
+        responses:
+          - status: 200
+            description: "成功更新产品"
+            schema: "Product"
+          - status: 400
+            description: "请求参数错误"
+            schema: "Error"
+          - status: 404
+            description: "产品不存在"
+            schema: "Error"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+          - status: 403
+            description: "权限不足"
+            schema: "Error"
+        required_permissions: ["write:products"]
+        idempotent: true
+      
+      - method: "PATCH"
+        summary: "部分更新产品"
+        description: "部分更新指定ID的产品"
+        parameters:
+          - name: "id"
+            in: "path"
+            type: "string"
+            format: "uuid"
+            required: true
+            description: "产品ID"
+          - name: "body"
+            in: "body"
+            schema: "ProductPatch"
+            description: "产品部分更新参数"
+        responses:
+          - status: 200
+            description: "成功更新产品"
+            schema: "Product"
+          - status: 400
+            description: "请求参数错误"
+            schema: "Error"
+          - status: 404
+            description: "产品不存在"
+            schema: "Error"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+          - status: 403
+            description: "权限不足"
+            schema: "Error"
+        required_permissions: ["write:products"]
+        idempotent: true
+      
+      - method: "DELETE"
+        summary: "删除产品"
+        description: "删除指定ID的产品"
+        parameters:
+          - name: "id"
+            in: "path"
+            type: "string"
+            format: "uuid"
+            required: true
+            description: "产品ID"
+        responses:
+          - status: 204
+            description: "成功删除产品"
+          - status: 404
+            description: "产品不存在"
+            schema: "Error"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+          - status: 403
+            description: "权限不足"
+            schema: "Error"
+        required_permissions: ["write:products"]
+        idempotent: true
+  
+  # 订单相关端点
+  - path: "/orders"
+    methods:
+      - method: "GET"
+        summary: "获取订单列表"
+        description: "分页获取订单列表，支持筛选和排序"
+        parameters:
+          - name: "page"
+            in: "query"
+            type: "integer"
+            default: 1
+            description: "页码"
+          - name: "limit"
+            in: "query"
+            type: "integer"
+            default: 10
+            description: "每页数量"
+          - name: "status"
+            in: "query"
+            type: "string"
+            enum: ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"]
+            description: "按状态筛选"
+          - name: "userId"
+            in: "query"
+            type: "string"
+            format: "uuid"
+            description: "按用户ID筛选"
+          - name: "startDate"
+            in: "query"
+            type: "string"
+            format: "date"
+            description: "开始日期"
+          - name: "endDate"
+            in: "query"
+            type: "string"
+            format: "date"
+            description: "结束日期"
+          - name: "sort"
+            in: "query"
+            type: "string"
+            default: "createdAt:desc"
+            description: "排序字段和方向，格式为field:direction"
+        responses:
+          - status: 200
+            description: "成功获取订单列表"
+            schema: "OrderList"
+          - status: 400
+            description: "请求参数错误"
+            schema: "Error"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+        required_permissions: ["read:orders"]
+        rate_limit: "100/minute"
+      
+      - method: "POST"
+        summary: "创建订单"
+        description: "创建新的订单"
+        parameters:
+          - name: "body"
+            in: "body"
+            schema: "OrderCreate"
+            description: "订单创建参数"
+        responses:
+          - status: 201
+            description: "成功创建订单"
+            schema: "Order"
+          - status: 400
+            description: "请求参数错误"
+            schema: "Error"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+          - status: 403
+            description: "权限不足"
+            schema: "Error"
+        required_permissions: ["write:orders"]
+        rate_limit: "20/minute"
+        idempotent: false
+  
+  - path: "/orders/{id}"
+    methods:
+      - method: "GET"
+        summary: "获取订单详情"
+        description: "根据ID获取订单详情"
+        parameters:
+          - name: "id"
+            in: "path"
+            type: "string"
+            format: "uuid"
+            required: true
+            description: "订单ID"
+        responses:
+          - status: 200
+            description: "成功获取订单详情"
+            schema: "Order"
+          - status: 404
+            description: "订单不存在"
+            schema: "Error"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+          - status: 403
+            description: "权限不足"
+            schema: "Error"
+        required_permissions: ["read:orders"]
+      
+      - method: "PATCH"
+        summary: "更新订单状态"
+        description: "更新指定ID的订单状态"
+        parameters:
+          - name: "id"
+            in: "path"
+            type: "string"
+            format: "uuid"
+            required: true
+            description: "订单ID"
+          - name: "body"
+            in: "body"
+            schema: "OrderStatusUpdate"
+            description: "订单状态更新参数"
+        responses:
+          - status: 200
+            description: "成功更新订单状态"
+            schema: "Order"
+          - status: 400
+            description: "请求参数错误"
+            schema: "Error"
+          - status: 404
+            description: "订单不存在"
+            schema: "Error"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+          - status: 403
+            description: "权限不足"
+            schema: "Error"
+        required_permissions: ["write:orders"]
+        idempotent: true
+  
+  - path: "/orders/{id}/cancel"
+    methods:
+      - method: "POST"
+        summary: "取消订单"
+        description: "取消指定ID的订单"
+        parameters:
+          - name: "id"
+            in: "path"
+            type: "string"
+            format: "uuid"
+            required: true
+            description: "订单ID"
+          - name: "body"
+            in: "body"
+            schema: "OrderCancelRequest"
+            description: "订单取消参数"
+        responses:
+          - status: 200
+            description: "成功取消订单"
+            schema: "Order"
+          - status: 400
+            description: "请求参数错误"
+            schema: "Error"
+          - status: 404
+            description: "订单不存在"
+            schema: "Error"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+          - status: 403
+            description: "权限不足或订单状态不允许取消"
+            schema: "Error"
+        required_permissions: ["write:orders"]
+        idempotent: true
+  
+  # 用户相关端点
+  - path: "/users"
+    methods:
+      - method: "GET"
+        summary: "获取用户列表"
+        description: "分页获取用户列表，支持筛选和排序"
+        parameters:
+          - name: "page"
+            in: "query"
+            type: "integer"
+            default: 1
+            description: "页码"
+          - name: "limit"
+            in: "query"
+            type: "integer"
+            default: 10
+            description: "每页数量"
+          - name: "status"
+            in: "query"
+            type: "string"
+            enum: ["ACTIVE", "INACTIVE", "LOCKED"]
+            description: "按状态筛选"
+          - name: "sort"
+            in: "query"
+            type: "string"
+            default: "createdAt:desc"
+            description: "排序字段和方向，格式为field:direction"
+        responses:
+          - status: 200
+            description: "成功获取用户列表"
+            schema: "UserList"
+          - status: 400
+            description: "请求参数错误"
+            schema: "Error"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+        required_permissions: ["read:users"]
+        rate_limit: "50/minute"
+      
+      - method: "POST"
+        summary: "创建用户"
+        description: "创建新的用户"
+        parameters:
+          - name: "body"
+            in: "body"
+            schema: "UserCreate"
+            description: "用户创建参数"
+        responses:
+          - status: 201
+            description: "成功创建用户"
+            schema: "User"
+          - status: 400
+            description: "请求参数错误"
+            schema: "Error"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+          - status: 403
+            description: "权限不足"
+            schema: "Error"
+        required_permissions: ["write:users"]
+        rate_limit: "10/minute"
+        idempotent: false
+  
+  - path: "/users/{id}"
+    methods:
+      - method: "GET"
+        summary: "获取用户详情"
+        description: "根据ID获取用户详情"
+        parameters:
+          - name: "id"
+            in: "path"
+            type: "string"
+            format: "uuid"
+            required: true
+            description: "用户ID"
+        responses:
+          - status: 200
+            description: "成功获取用户详情"
+            schema: "User"
+          - status: 404
+            description: "用户不存在"
+            schema: "Error"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+          - status: 403
+            description: "权限不足"
+            schema: "Error"
+        required_permissions: ["read:users"]
+      
+      - method: "PUT"
+        summary: "更新用户"
+        description: "更新指定ID的用户"
+        parameters:
+          - name: "id"
+            in: "path"
+            type: "string"
+            format: "uuid"
+            required: true
+            description: "用户ID"
+          - name: "body"
+            in: "body"
+            schema: "UserUpdate"
+            description: "用户更新参数"
+        responses:
+          - status: 200
+            description: "成功更新用户"
+            schema: "User"
+          - status: 400
+            description: "请求参数错误"
+            schema: "Error"
+          - status: 404
+            description: "用户不存在"
+            schema: "Error"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+          - status: 403
+            description: "权限不足"
+            schema: "Error"
+        required_permissions: ["write:users"]
+        idempotent: true
+  
+  - path: "/users/{id}/orders"
+    methods:
+      - method: "GET"
+        summary: "获取用户订单列表"
+        description: "获取指定用户的订单列表"
+        parameters:
+          - name: "id"
+            in: "path"
+            type: "string"
+            format: "uuid"
+            required: true
+            description: "用户ID"
+          - name: "page"
+            in: "query"
+            type: "integer"
+            default: 1
+            description: "页码"
+          - name: "limit"
+            in: "query"
+            type: "integer"
+            default: 10
+            description: "每页数量"
+          - name: "status"
+            in: "query"
+            type: "string"
+            enum: ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"]
+            description: "按状态筛选"
+        responses:
+          - status: 200
+            description: "成功获取用户订单列表"
+            schema: "OrderList"
+          - status: 404
+            description: "用户不存在"
+            schema: "Error"
+          - status: 401
+            description: "未授权"
+            schema: "Error"
+          - status: 403
+            description: "权限不足"
+            schema: "Error"
+        required_permissions: ["read:orders"]
+
+# ======== 数据模型定义 ========
+schemas:
+  - name: "Product"
+    description: "产品完整模型"
+    properties:
+      - name: "id"
+        type: "string"
+        format: "uuid"
+        description: "产品唯一标识符"
+      - name: "name"
+        type: "string"
+        description: "产品名称"
+      - name: "description"
+        type: "string"
+        description: "产品描述"
+      - name: "price"
+        type: "number"
+        format: "decimal"
+        description: "产品价格"
+      - name: "inventory"
+        type: "integer"
+        description: "库存数量"
+      - name: "status"
+        type: "string"
+        enum: ["ACTIVE", "INACTIVE", "OUT_OF_STOCK"]
+        description: "产品状态"
+      - name: "createdAt"
+        type: "string"
+        format: "date-time"
+        description: "创建时间"
+      - name: "updatedAt"
+        type: "string"
+        format: "date-time"
+        description: "更新时间"
+  
+  - name: "ProductCreate"
+    description: "创建产品的参数"
+    properties:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "产品名称"
+      - name: "description"
+        type: "string"
+        required: false
+        description: "产品描述"
+      - name: "price"
+        type: "number"
+        format: "decimal"
+        required: true
+        description: "产品价格"
+      - name: "inventory"
+        type: "integer"
+        required: true
+        description: "库存数量"
+      - name: "status"
+        type: "string"
+        enum: ["ACTIVE", "INACTIVE"]
+        default: "ACTIVE"
+        description: "产品状态"
+  
+  - name: "ProductUpdate"
+    description: "更新产品的参数"
+    properties:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "产品名称"
+      - name: "description"
+        type: "string"
+        required: false
+        description: "产品描述"
+      - name: "price"
+        type: "number"
+        format: "decimal"
+        required: true
+        description: "产品价格"
+      - name: "inventory"
+        type: "integer"
+        required: true
+        description: "库存数量"
+      - name: "status"
+        type: "string"
+        enum: ["ACTIVE", "INACTIVE", "OUT_OF_STOCK"]
+        required: true
+        description: "产品状态"
+  
+  - name: "ProductPatch"
+    description: "部分更新产品的参数"
+    properties:
+      - name: "name"
+        type: "string"
+        required: false
+        description: "产品名称"
+      - name: "description"
+        type: "string"
+        required: false
+        description: "产品描述"
+      - name: "price"
+        type: "number"
+        format: "decimal"
+        required: false
+        description: "产品价格"
+      - name: "inventory"
+        type: "integer"
+        required: false
+        description: "库存数量"
+      - name: "status"
+        type: "string"
+        enum: ["ACTIVE", "INACTIVE", "OUT_OF_STOCK"]
+        required: false
+        description: "产品状态"
+  
+  - name: "ProductList"
+    description: "产品列表响应"
+    properties:
+      - name: "items"
+        type: "array"
+        items: "Product"
+        description: "产品列表"
+      - name: "total"
+        type: "integer"
+        description: "总数量"
+      - name: "page"
+        type: "integer"
+        description: "当前页码"
+      - name: "limit"
+        type: "integer"
+        description: "每页数量"
+  
+  - name: "Order"
+    description: "订单完整模型"
+    properties:
+      - name: "id"
+        type: "string"
+        format: "uuid"
+        description: "订单唯一标识符"
+      - name: "userId"
+        type: "string"
+        format: "uuid"
+        description: "用户ID"
+      - name: "status"
+        type: "string"
+        enum: ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"]
+        description: "订单状态"
+      - name: "totalAmount"
+        type: "number"
+        format: "decimal"
+        description: "订单总金额"
+      - name: "items"
+        type: "array"
+        items: "OrderItem"
+        description: "订单项列表"
+      - name: "createdAt"
+        type: "string"
+        format: "date-time"
+        description: "创建时间"
+      - name: "updatedAt"
+        type: "string"
+        format: "date-time"
+        description: "更新时间"
+  
+  - name: "OrderItem"
+    description: "订单项模型"
+    properties:
+      - name: "id"
+        type: "string"
+        format: "uuid"
+        description: "订单项唯一标识符"
+      - name: "productId"
+        type: "string"
+        format: "uuid"
+        description: "产品ID"
+      - name: "productName"
+        type: "string"
+        description: "产品名称（下单时的快照）"
+      - name: "quantity"
+        type: "integer"
+        description: "购买数量"
+      - name: "price"
+        type: "number"
+        format: "decimal"
+        description: "购买时的产品单价"
+      - name: "subtotal"
+        type: "number"
+        format: "decimal"
+        description: "小计金额"
+  
+  - name: "OrderCreate"
+    description: "创建订单的参数"
+    properties:
+      - name: "items"
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            - name: "productId"
+              type: "string"
+              format: "uuid"
+              required: true
+              description: "产品ID"
+            - name: "quantity"
+              type: "integer"
+              required: true
+              description: "购买数量"
+        required: true
+        description: "订单项列表"
+  
+  - name: "OrderStatusUpdate"
+    description: "更新订单状态的参数"
+    properties:
+      - name: "status"
+        type: "string"
+        enum: ["PAID", "SHIPPED", "DELIVERED", "CANCELLED"]
+        required: true
+        description: "新的订单状态"
+      - name: "reason"
+        type: "string"
+        required: false
+        description: "状态变更原因（特别是取消时）"
+  
+  - name: "OrderCancelRequest"
+    description: "取消订单的参数"
+    properties:
+      - name: "reason"
+        type: "string"
+        required: true
+        description: "取消原因"
+  
+  - name: "OrderList"
+    description: "订单列表响应"
+    properties:
+      - name: "items"
+        type: "array"
+        items: "Order"
+        description: "订单列表"
+      - name: "total"
+        type: "integer"
+        description: "总数量"
+      - name: "page"
+        type: "integer"
+        description: "当前页码"
+      - name: "limit"
+        type: "integer"
+        description: "每页数量"
+  
+  - name: "User"
+    description: "用户模型（返回给客户端的安全版本）"
+    properties:
+      - name: "id"
+        type: "string"
+        format: "uuid"
+        description: "用户唯一标识符"
+      - name: "username"
+        type: "string"
+        description: "用户名"
+      - name: "email"
+        type: "string"
+        format: "email"
+        description: "电子邮箱"
+      - name: "status"
+        type: "string"
+        enum: ["ACTIVE", "INACTIVE", "LOCKED"]
+        description: "用户状态"
+      - name: "createdAt"
+        type: "string"
+        format: "date-time"
+        description: "创建时间"
+  
+  - name: "UserCreate"
+    description: "创建用户的参数"
+    properties:
+      - name: "username"
+        type: "string"
+        required: true
+        description: "用户名"
+      - name: "email"
+        type: "string"
+        format: "email"
+        required: true
+        description: "电子邮

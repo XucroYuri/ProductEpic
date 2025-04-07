@@ -1,0 +1,412 @@
+# UI规范定义
+# 版本: 1.0.0
+
+# 这个文件定义了系统的用户界面设计规范和交互模式
+# UI规范确保系统界面的一致性和用户体验的连贯性
+
+# ======== 设计系统 ========
+design_system:
+  name: "ProductEpic Design System"
+  version: "1.0.0"
+  description: "产品的设计系统，定义UI组件和交互模式"
+
+# ======== 品牌标识 ========
+branding:
+  colors:
+    primary: "#3366FF"
+    secondary: "#6C63FF"
+    accent: "#FF5630"
+    success: "#36B37E"
+    warning: "#FFAB00"
+    error: "#FF5630"
+    info: "#00B8D9"
+    background: "#FFFFFF"
+    surface: "#F4F5F7"
+    text:
+      primary: "#172B4D"
+      secondary: "#6B778C"
+      disabled: "#A5ADBA"
+      inverse: "#FFFFFF"
+  
+  typography:
+    font_family:
+      primary: "'Roboto', sans-serif"
+      secondary: "'Open Sans', sans-serif"
+      monospace: "'Roboto Mono', monospace"
+    
+    font_sizes:
+      h1: "2.5rem"
+      h2: "2rem"
+      h3: "1.75rem"
+      h4: "1.5rem"
+      h5: "1.25rem"
+      h6: "1rem"
+      body: "1rem"
+      small: "0.875rem"
+      caption: "0.75rem"
+    
+    font_weights:
+      light: 300
+      regular: 400
+      medium: 500
+      bold: 700
+  
+  spacing:
+    unit: "8px"
+    scale: [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48]
+  
+  borders:
+    radius:
+      small: "2px"
+      medium: "4px"
+      large: "8px"
+      round: "50%"
+    
+    width:
+      thin: "1px"
+      medium: "2px"
+      thick: "4px"
+  
+  shadows:
+    - level: 1
+      value: "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)"
+    - level: 2
+      value: "0 3px 6px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.12)"
+    - level: 3
+      value: "0 10px 20px rgba(0,0,0,0.15), 0 3px 6px rgba(0,0,0,0.10)"
+    - level: 4
+      value: "0 15px 25px rgba(0,0,0,0.15), 0 5px 10px rgba(0,0,0,0.05)"
+  
+  logo:
+    primary: "assets/logo-primary.svg"
+    secondary: "assets/logo-secondary.svg"
+    favicon: "assets/favicon.ico"
+
+# ======== 组件库 ========
+components:
+  # 基础组件
+  - name: "Button"
+    description: "交互按钮组件"
+    variants:
+      - name: "primary"
+        description: "主要按钮，用于强调主要操作"
+      - name: "secondary"
+        description: "次要按钮，用于次要操作"
+      - name: "text"
+        description: "文本按钮，无背景色"
+      - name: "icon"
+        description: "图标按钮"
+    states:
+      - name: "default"
+      - name: "hover"
+      - name: "active"
+      - name: "focus"
+      - name: "disabled"
+    properties:
+      - name: "label"
+        type: "string"
+        description: "按钮文本"
+      - name: "icon"
+        type: "string"
+        description: "按钮图标"
+      - name: "size"
+        type: "enum"
+        values: ["small", "medium", "large"]
+        default: "medium"
+        description: "按钮大小"
+      - name: "disabled"
+        type: "boolean"
+        default: false
+        description: "是否禁用"
+  
+  - name: "Input"
+    description: "文本输入框组件"
+    variants:
+      - name: "text"
+        description: "文本输入框"
+      - name: "password"
+        description: "密码输入框"
+      - name: "number"
+        description: "数字输入框"
+      - name: "textarea"
+        description: "多行文本输入框"
+    states:
+      - name: "default"
+      - name: "focus"
+      - name: "error"
+      - name: "disabled"
+    properties:
+      - name: "label"
+        type: "string"
+        description: "输入框标签"
+      - name: "placeholder"
+        type: "string"
+        description: "占位文本"
+      - name: "value"
+        type: "string"
+        description: "输入值"
+      - name: "error"
+        type: "string"
+        description: "错误信息"
+      - name: "required"
+        type: "boolean"
+        default: false
+        description: "是否必填"
+      - name: "disabled"
+        type: "boolean"
+        default: false
+        description: "是否禁用"
+  
+  # 复合组件
+  - name: "Card"
+    description: "卡片容器组件"
+    variants:
+      - name: "default"
+        description: "默认卡片"
+      - name: "elevated"
+        description: "带阴影的卡片"
+      - name: "outlined"
+        description: "带边框的卡片"
+    properties:
+      - name: "title"
+        type: "string"
+        description: "卡片标题"
+      - name: "subtitle"
+        type: "string"
+        description: "卡片副标题"
+      - name: "image"
+        type: "string"
+        description: "卡片图片URL"
+      - name: "elevation"
+        type: "number"
+        values: [1, 2, 3, 4]
+        default: 1
+        description: "卡片阴影级别"
+  
+  - name: "Table"
+    description: "数据表格组件"
+    properties:
+      - name: "columns"
+        type: "array"
+        description: "表格列配置"
+      - name: "data"
+        type: "array"
+        description: "表格数据"
+      - name: "pagination"
+        type: "object"
+        description: "分页配置"
+      - name: "sortable"
+        type: "boolean"
+        default: false
+        description: "是否可排序"
+      - name: "selectable"
+        type: "boolean"
+        default: false
+        description: "是否可选择行"
+
+# ======== 页面布局 ========
+layouts:
+  - name: "DefaultLayout"
+    description: "默认页面布局"
+    structure:
+      - name: "header"
+        description: "页面顶部区域"
+        components: ["Logo", "Navigation", "UserMenu"]
+      - name: "sidebar"
+        description: "页面侧边栏区域"
+        components: ["SideNavigation"]
+      - name: "main"
+        description: "页面主要内容区域"
+        components: ["PageHeader", "Content"]
+      - name: "footer"
+        description: "页面底部区域"
+        components: ["FooterLinks", "Copyright"]
+  
+  - name: "AuthLayout"
+    description: "认证页面布局"
+    structure:
+      - name: "header"
+        description: "页面顶部区域"
+        components: ["Logo"]
+      - name: "main"
+        description: "页面主要内容区域"
+        components: ["AuthForm"]
+      - name: "footer"
+        description: "页面底部区域"
+        components: ["Copyright"]
+
+# ======== 页面模板 ========
+templates:
+  - name: "EntityListTemplate"
+    description: "实体列表页面模板"
+    layout: "DefaultLayout"
+    components:
+      - name: "PageHeader"
+        properties:
+          title: "{{entity}}列表"
+          actions: ["创建{{entity}}", "导出"]
+      - name: "FilterBar"
+        properties:
+          filters: ["状态", "创建日期"]
+      - name: "Table"
+        properties:
+          columns: ["ID", "名称", "状态", "创建时间", "操作"]
+          pagination: true
+          sortable: true
+      - name: "Pagination"
+  
+  - name: "EntityDetailTemplate"
+    description: "实体详情页面模板"
+    layout: "DefaultLayout"
+    components:
+      - name: "PageHeader"
+        properties:
+          title: "{{entity}}详情"
+          actions: ["编辑", "删除"]
+      - name: "Tabs"
+        properties:
+          tabs: ["基本信息", "关联实体", "操作历史"]
+      - name: "DetailForm"
+        properties:
+          fields: ["ID", "名称", "状态", "创建时间"]
+      - name: "RelatedEntitiesTable"
+        properties:
+          entity: "{{relatedEntity}}"
+          pagination: true
+  
+  - name: "EntityFormTemplate"
+    description: "实体表单页面模板"
+    layout: "DefaultLayout"
+    components:
+      - name: "PageHeader"
+        properties:
+          title: "{{action}}{{entity}}"
+          actions: ["保存", "取消"]
+      - name: "Form"
+        properties:
+          fields: ["名称", "状态"]
+          validation: true
+
+# ======== 交互模式 ========
+interactions:
+  - name: "表单提交"
+    description: "表单提交交互模式"
+    steps:
+      - "用户填写表单字段"
+      - "点击提交按钮"
+      - "显示加载状态"
+      - "提交成功后显示成功提示"
+      - "提交失败后显示错误信息"
+  
+  - name: "列表筛选"
+    description: "列表筛选交互模式"
+    steps:
+      - "用户设置筛选条件"
+      - "点击筛选按钮"
+      - "显示加载状态"
+      - "更新列表数据"
+      - "显示筛选结果数量"
+  
+  - name: "详情查看"
+    description: "详情查看交互模式"
+    steps:
+      - "用户从列表中选择项目"
+      - "显示详情页面"
+      - "加载详情数据"
+      - "显示关联数据"
+
+# ======== 响应式设计 ========
+responsive_design:
+  breakpoints:
+    - name: "xs"
+      value: "0px"
+      description: "超小屏幕，如手机竖屏"
+    - name: "sm"
+      value: "600px"
+      description: "小屏幕，如手机横屏"
+    - name: "md"
+      value: "960px"
+      description: "中等屏幕，如平板"
+    - name: "lg"
+      value: "1280px"
+      description: "大屏幕，如笔记本"
+    - name: "xl"
+      value: "1920px"
+      description: "超大屏幕，如桌面显示器"
+  
+  rules:
+    - name: "移动优先"
+      description: "采用移动优先的设计原则，从小屏幕开始设计，然后逐步扩展到大屏幕"
+    - name: "流式布局"
+      description: "使用流式布局，确保内容能够适应不同屏幕尺寸"
+    - name: "组件适应性"
+      description: "组件应根据屏幕尺寸调整其大小、布局和行为"
+
+# ======== 可访问性 ========
+accessibility:
+  standards:
+    - name: "WCAG 2.1 AA"
+      description: "遵循Web内容可访问性指南(WCAG) 2.1 AA级标准"
+  
+  requirements:
+    - name: "键盘导航"
+      description: "所有功能必须可通过键盘访问"
+    - name: "屏幕阅读器兼容"
+      description: "所有内容必须对屏幕阅读器友好"
+    - name: "颜色对比度"
+      description: "文本和背景的颜色对比度必须符合WCAG标准"
+    - name: "替代文本"
+      description: "所有非文本内容必须提供替代文本"
+
+# ======== 主题支持 ========
+themes:
+  - name: "light"
+    description: "浅色主题"
+    colors:
+      background: "#FFFFFF"
+      surface: "#F4F5F7"
+      text: "#172B4D"
+  
+  - name: "dark"
+    description: "深色主题"
+    colors:
+      background: "#1D1E2C"
+      surface: "#2D2E3A"
+      text: "#FFFFFF"
+  
+  switching:
+    method: "user-preference"
+    description: "根据用户偏好切换主题，同时尊重系统设置"
+
+# ======== 国际化 ========
+internationalization:
+  default_language: "zh-CN"
+  supported_languages:
+    - code: "zh-CN"
+      name: "简体中文"
+    - code: "en-US"
+      name: "English (US)"
+  
+  text_direction:
+    - language: "zh-CN"
+      direction: "ltr"
+    - language: "en-US"
+      direction: "ltr"
+  
+  date_formats:
+    - language: "zh-CN"
+      short: "YYYY-MM-DD"
+      long: "YYYY年MM月DD日"
+    - language: "en-US"
+      short: "MM/DD/YYYY"
+      long: "MMMM D, YYYY"
+
+# ======== UI版本控制 ========
+ui_versioning:
+  strategy: "语义化版本"
+  description: "使用语义化版本控制UI组件库，遵循主版本.次版本.修订版本的格式"
+  compatibility:
+    - rule: "向后兼容性"
+      description: "次版本和修订版本更新必须保持向后兼容性"
+    - rule: "弃用通知"
+      description: "UI组件弃用前必须提前通知并提供迁移路径"

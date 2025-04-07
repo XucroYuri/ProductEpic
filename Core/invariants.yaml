@@ -1,0 +1,129 @@
+# 系统不变量和约束条件
+# 版本: 1.0.0
+
+# 这个文件定义了系统必须始终满足的不变量和约束条件
+# 这些条件用于验证系统的正确性，并在开发和演进过程中保持一致性
+
+# ======== 数据完整性约束 ========
+data_integrity:
+  - name: "主键唯一性"
+    description: "所有实体的主键必须唯一"
+    validation: "对于任何实体类型T，不存在两个实例a和b，使得a.id = b.id"
+    severity: CRITICAL
+    enforcement: SYSTEM # 系统级强制执行
+
+  - name: "外键完整性"
+    description: "所有外键必须引用有效的主键"
+    validation: "对于任何包含外键的实体，其外键值必须对应到目标实体的某个有效实例"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+  - name: "非空约束"
+    description: "标记为required的属性不能为null"
+    validation: "对于任何实体的required属性，其值不能为null或空字符串"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+# ======== 业务规则约束 ========
+business_rules:
+  - name: "状态转换有效性"
+    description: "实体状态转换必须遵循预定义的路径"
+    validation: "Entity1的状态转换必须遵循kernel.dsl中定义的状态转换规则"
+    severity: HIGH
+    enforcement: APPLICATION # 应用级强制执行
+
+  - name: "值范围约束"
+    description: "数值类型的属性必须在有效范围内"
+    validation: "Entity2.value必须大于0且精度不超过2位小数"
+    severity: HIGH
+    enforcement: APPLICATION
+
+  - name: "命名规范"
+    description: "实体名称必须符合命名规范"
+    validation: "Entity1.name长度必须在3-50个字符之间"
+    severity: MEDIUM
+    enforcement: APPLICATION
+
+# ======== 系统行为约束 ========
+system_behavior:
+  - name: "操作原子性"
+    description: "核心操作必须是原子的"
+    validation: "所有在kernel.dsl中定义的操作要么完全成功，要么完全失败，不存在部分成功的状态"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+  - name: "操作幂等性"
+    description: "特定操作必须是幂等的"
+    validation: "对于标记为幂等的操作，多次执行与执行一次的效果相同"
+    severity: HIGH
+    enforcement: APPLICATION
+
+  - name: "并发控制"
+    description: "防止并发操作导致的数据不一致"
+    validation: "当多个操作同时修改同一实体时，系统必须确保数据一致性"
+    severity: HIGH
+    enforcement: SYSTEM
+
+# ======== 架构约束 ========
+architectural_constraints:
+  - name: "核心与扩展分离"
+    description: "核心业务逻辑与扩展功能必须明确分离"
+    validation: "扩展功能只能通过kernel.dsl中定义的扩展点与核心业务逻辑交互"
+    severity: HIGH
+    enforcement: REVIEW # 代码审查强制执行
+
+  - name: "向后兼容性"
+    description: "API变更必须保持向后兼容"
+    validation: "对公共API的任何修改都不能破坏现有客户端"
+    severity: HIGH
+    enforcement: REVIEW
+
+  - name: "依赖限制"
+    description: "限制核心模块的外部依赖"
+    validation: "核心模块不能依赖于非核心模块"
+    severity: MEDIUM
+    enforcement: REVIEW
+
+# ======== 性能约束 ========
+performance_constraints:
+  - name: "响应时间"
+    description: "核心操作的最大响应时间"
+    validation: "95%的核心操作必须在200ms内完成"
+    severity: MEDIUM
+    enforcement: MONITORING # 通过监控强制执行
+
+  - name: "资源使用"
+    description: "系统资源使用限制"
+    validation: "系统在正常负载下CPU使用率不超过70%，内存使用率不超过80%"
+    severity: MEDIUM
+    enforcement: MONITORING
+
+# ======== 安全约束 ========
+security_constraints:
+  - name: "数据加密"
+    description: "敏感数据必须加密存储"
+    validation: "所有标记为敏感的数据在存储时必须加密"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+  - name: "访问控制"
+    description: "实体访问必须经过授权"
+    validation: "对实体的所有访问必须验证用户是否有相应的权限"
+    severity: CRITICAL
+    enforcement: SYSTEM
+
+# ======== 验证规则 ========
+validation_rules:
+  - name: "不变量验证频率"
+    description: "定义不同类型不变量的验证频率"
+    rules:
+      - "CRITICAL级别的不变量必须在每次操作前后验证"
+      - "HIGH级别的不变量必须在相关操作完成后验证"
+      - "MEDIUM级别的不变量可以通过定期批处理验证"
+
+  - name: "违反处理策略"
+    description: "定义违反不变量时的处理策略"
+    rules:
+      - "违反CRITICAL级别不变量时必须立即回滚操作并记录错误"
+      - "违反HIGH级别不变量时必须记录错误并触发警报"
+      - "违反MEDIUM级别不变量时必须记录警告并在下一个维护周期修复"

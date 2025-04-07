@@ -1,0 +1,497 @@
+# 电子商务系统支付模块定义
+# 版本: 1.0.0
+
+# 这个文件定义了电子商务系统的支付模块
+# 该模块扩展了核心业务逻辑，提供支付处理功能
+
+# ======== 模块基本信息 ========
+module_info:
+  name: "PaymentModule"
+  version: "1.0.0"
+  description: "电子商务系统的支付处理模块"
+  author: "ProductEpic Team"
+  dependencies:
+    core: "^1.0.0"
+    modules: []
+
+# ======== 模块实体定义 ========
+entities:
+  - name: "Payment"
+    description: "支付信息实体"
+    attributes:
+      - name: "id"
+        type: "UUID"
+        required: true
+        description: "支付唯一标识符"
+      - name: "orderId"
+        type: "UUID"
+        required: true
+        description: "关联的订单ID"
+      - name: "amount"
+        type: "Decimal"
+        required: true
+        description: "支付金额"
+      - name: "method"
+        type: "Enum"
+        values: ["CREDIT_CARD", "DEBIT_CARD", "BANK_TRANSFER", "DIGITAL_WALLET"]
+        required: true
+        description: "支付方式"
+      - name: "status"
+        type: "Enum"
+        values: ["PENDING", "PROCESSING", "COMPLETED", "FAILED", "REFUNDED"]
+        default: "PENDING"
+        description: "支付状态"
+      - name: "transactionId"
+        type: "String"
+        required: false
+        description: "外部支付系统的交易ID"
+      - name: "createdAt"
+        type: "Timestamp"
+        required: true
+        description: "创建时间"
+      - name: "updatedAt"
+        type: "Timestamp"
+        required: true
+        description: "更新时间"
+
+  - name: "PaymentMethod"
+    description: "用户保存的支付方式"
+    attributes:
+      - name: "id"
+        type: "UUID"
+        required: true
+        description: "支付方式唯一标识符"
+      - name: "userId"
+        type: "UUID"
+        required: true
+        description: "关联的用户ID"
+      - name: "type"
+        type: "Enum"
+        values: ["CREDIT_CARD", "DEBIT_CARD", "BANK_ACCOUNT", "DIGITAL_WALLET"]
+        required: true
+        description: "支付方式类型"
+      - name: "name"
+        type: "String"
+        required: true
+        description: "支付方式名称"
+      - name: "details"
+        type: "Object"
+        required: true
+        description: "支付方式详细信息（加密存储）"
+      - name: "isDefault"
+        type: "Boolean"
+        default: false
+        description: "是否为默认支付方式"
+      - name: "createdAt"
+        type: "Timestamp"
+        required: true
+        description: "创建时间"
+
+# ======== 模块关系定义 ========
+relationships:
+  - type: "ManyToOne"
+    source: "Payment"
+    target: "Order"
+    sourceAttribute: "orderId"
+    targetAttribute: "id"
+    description: "一个支付关联一个订单"
+
+  - type: "ManyToOne"
+    source: "PaymentMethod"
+    target: "User"
+    sourceAttribute: "userId"
+    targetAttribute: "id"
+    description: "一个支付方式关联一个用户"
+
+# ======== 模块操作定义 ========
+operations:
+  - name: "createPayment"
+    description: "创建支付记录"
+    input:
+      - name: "orderId"
+        type: "UUID"
+        required: true
+      - name: "method"
+        type: "Enum"
+        values: ["CREDIT_CARD", "DEBIT_CARD", "BANK_TRANSFER", "DIGITAL_WALLET"]
+        required: true
+      - name: "paymentMethodId"
+        type: "UUID"
+        required: false
+        description: "用户保存的支付方式ID"
+      - name: "paymentDetails"
+        type: "Object"
+        required: false
+        description: "临时支付详情（如未使用保存的支付方式）"
+    output:
+      type: "Payment"
+    preconditions:
+      - "orderId必须对应一个状态为PENDING的Order"
+      - "支付金额必须等于订单总金额"
+      - "如果提供paymentMethodId，必须是属于订单用户的有效支付方式"
+      - "如果未提供paymentMethodId，必须提供有效的paymentDetails"
+    postconditions:
+      - "创建新的Payment实例"
+      - "Payment.status设置为PROCESSING"
+      - "调用支付处理服务处理支付"
+
+  - name: "processPaymentCallback"
+    description: "处理支付回调"
+    input:
+      - name: "paymentId"
+        type: "UUID"
+        required: true
+      - name: "transactionId"
+        type: "String"
+        required: true
+      - name: "status"
+        type: "Enum"
+        values: ["COMPLETED", "FAILED"]
+        required: true
+      - name: "details"
+        type: "Object"
+        required: false
+        description: "支付处理详情"
+    output:
+      type: "Payment"
+    preconditions:
+      - "paymentId必须对应一个状态为PROCESSING的Payment"
+    postconditions:
+      - "更新Payment.status为回调状态"
+      - "更新Payment.transactionId"
+      - "如果状态为COMPLETED，调用updateOrderStatus将订单状态更新为PAID"
+      - "如果状态为FAILED，记录失败原因"
+
+  - name: "refundPayment"
+    description: "退款处理"
+    input:
+      - name: "paymentId"
+        type: "UUID"
+        required: true
+      - name: "amount"
+        type: "Decimal"
+        required: true
+        description: "退款金额"
+      - name: "reason"
+        type: "String"
+        required: true
+        description: "退款原因"
+    output:
+      type: "Payment"
+    preconditions:
+      - "paymentId必须对应一个状态为COMPLETED的Payment"
+      - "退款金额必须小于等于原支付金额"
+      - "关联的订单状态必须允许退款"
+    postconditions:
+      - "创建退款记录"
+      - "调用支付处理服务处理退款"
+      - "更新Payment.status为REFUNDED"
+      - "如果是全额退款，调用updateOrderStatus将订单状态更新为CANCELLED"
+
+  - name: "savePaymentMethod"
+    description: "保存用户支付方式"
+    input:
+      - name: "userId"
+        type: "UUID"
+        required: true
+      - name: "type"
+        type: "Enum"
+        values: ["CREDIT_CARD", "DEBIT_CARD", "BANK_ACCOUNT", "DIGITAL_WALLET"]
+        required: true
+      - name: "name"
+        type: "String"
+        required: true
+      - name: "details"
+        type: "Object"
+        required: true
+      - name: "isDefault"
+        type: "Boolean"
+        required: false
+        default: false
+    output:
+      type: "PaymentMethod"
+    preconditions:
+      - "userId必须对应一个有效的User"
+      - "支付方式详情必须有效"
+      - "如果isDefault为true，用户其他支付方式的isDefault将被设置为false"
+    postconditions:
+      - "创建新的PaymentMethod实例"
+      - "敏感支付信息加密存储"
+      - "如果isDefault为true，更新用户其他支付方式的isDefault为false"
+
+# ======== 模块业务规则 ========
+rules:
+  - name: "支付状态转换规则"
+    description: "定义支付状态的有效转换路径"
+    conditions:
+      - "PENDING只能转换为PROCESSING"
+      - "PROCESSING可以转换为COMPLETED或FAILED"
+      - "COMPLETED可以转换为REFUNDED"
+      - "FAILED和REFUNDED是终态，不能再转换"
+
+  - name: "支付安全规则"
+    description: "支付处理的安全规则"
+    conditions:
+      - "支付卡信息必须加密存储"
+      - "支付处理必须使用安全通道"
+      - "敏感支付信息不得记录在日志中"
+      - "连续失败的支付尝试应触发风险控制"
+
+# ======== 模块API扩展 ========
+api_extensions:
+  - path: "/payments"
+    methods:
+      - method: "POST"
+        summary: "创建支付"
+        description: "为指定订单创建支付记录"
+        parameters:
+          - name: "body"
+            in: "body"
+            schema: "PaymentCreate"
+        responses:
+          - status: 201
+            description: "成功创建支付记录"
+            schema: "Payment"
+          - status: 400
+            description: "请求参数错误"
+            schema: "Error"
+          - status: 404
+            description: "订单不存在"
+            schema: "Error"
+        required_permissions: ["create:payment"]
+
+  - path: "/payments/{id}"
+    methods:
+      - method: "GET"
+        summary: "获取支付详情"
+        description: "获取指定支付记录的详情"
+        parameters:
+          - name: "id"
+            in: "path"
+            type: "string"
+            format: "uuid"
+            required: true
+        responses:
+          - status: 200
+            description: "成功获取支付详情"
+            schema: "Payment"
+          - status: 404
+            description: "支付记录不存在"
+            schema: "Error"
+        required_permissions: ["read:payment"]
+
+  - path: "/payments/{id}/refund"
+    methods:
+      - method: "POST"
+        summary: "申请退款"
+        description: "为指定支付申请退款"
+        parameters:
+          - name: "id"
+            in: "path"
+            type: "string"
+            format: "uuid"
+            required: true
+          - name: "body"
+            in: "body"
+            schema: "RefundRequest"
+        responses:
+          - status: 200
+            description: "成功申请退款"
+            schema: "Payment"
+          - status: 400
+            description: "请求参数错误"
+            schema: "Error"
+          - status: 404
+            description: "支付记录不存在"
+            schema: "Error"
+        required_permissions: ["refund:payment"]
+
+  - path: "/payment-methods"
+    methods:
+      - method: "POST"
+        summary: "保存支付方式"
+        description: "保存用户支付方式"
+        parameters:
+          - name: "body"
+            in: "body"
+            schema: "PaymentMethodCreate"
+        responses:
+          - status: 201
+            description: "成功保存支付方式"
+            schema: "PaymentMethod"
+          - status: 400
+            description: "请求参数错误"
+            schema: "Error"
+        required_permissions: ["create:payment-method"]
+
+      - method: "GET"
+        summary: "获取支付方式列表"
+        description: "获取当前用户的支付方式列表"
+        responses:
+          - status: 200
+            description: "成功获取支付方式列表"
+            schema: "PaymentMethodList"
+        required_permissions: ["read:payment-method"]
+
+# ======== 模块UI扩展 ========
+ui_extensions:
+  - name: "PaymentForm"
+    type: "component"
+    description: "支付表单组件"
+    properties:
+      orderId: "UUID"
+      amount: "Decimal"
+      onSuccess: "Function"
+      onFailure: "Function"
+
+  - name: "PaymentMethodsList"
+    type: "component"
+    description: "用户支付方式列表组件"
+    properties:
+      userId: "UUID"
+      onSelect: "Function"
+      onAdd: "Function"
+
+  - name: "PaymentHistoryPage"
+    type: "page"
+    description: "支付历史页面"
+    route: "/account/payments"
+    components: ["PaymentHistoryList", "PaymentFilter"]
+
+# ======== 模块扩展点 ========
+extension_points:
+  - name: "beforePaymentProcess"
+    description: "支付处理前的扩展点"
+    trigger: "createPayment操作执行后，实际处理支付前"
+    interface:
+      - name: "validatePayment"
+        input: ["payment", "order", "user"]
+        output: "Boolean"
+
+  - name: "afterPaymentComplete"
+    description: "支付完成后的扩展点"
+    trigger: "processPaymentCallback操作执行后，支付状态为COMPLETED时"
+    interface:
+      - name: "processCompletedPayment"
+        input: ["payment", "order"]
+        output: "void"
+
+# ======== 模块配置选项 ========
+config_options:
+  - name: "paymentProviders"
+    type: "Object"
+    description: "支付服务提供商配置"
+    properties:
+      - name: "stripe"
+        type: "Object"
+        properties:
+          - name: "enabled"
+            type: "Boolean"
+            default: true
+          - name: "apiKey"
+            type: "String"
+            required: true
+          - name: "webhookSecret"
+            type: "String"
+            required: true
+      - name: "paypal"
+        type: "Object"
+        properties:
+          - name: "enabled"
+            type: "Boolean"
+            default: false
+          - name: "clientId"
+            type: "String"
+          - name: "clientSecret"
+            type: "String"
+
+  - name: "securitySettings"
+    type: "Object"
+    description: "支付安全设置"
+    properties:
+      - name: "encryptionKey"
+        type: "String"
+        required: true
+      - name: "maxFailedAttempts"
+        type: "Integer"
+        default: 3
+      - name: "lockoutPeriod"
+        type: "Integer"
+        default: 30
+        description: "锁定时间（分钟）"
+
+# ======== 模块集成点 ========
+integration_points:
+  - name: "paymentGateway"
+    description: "支付网关集成"
+    interface:
+      - name: "processPayment"
+        input: ["payment"]
+        output: "PaymentResult"
+      - name: "processRefund"
+        input: ["payment", "amount", "reason"]
+        output: "RefundResult"
+
+  - name: "fraudDetection"
+    description: "欺诈检测服务集成"
+    interface:
+      - name: "assessRisk"
+        input: ["payment", "user", "order"]
+        output: "RiskAssessment"
+
+# ======== 模块测试规范 ========
+test_specifications:
+  unit_tests:
+    - name: "testCreatePayment"
+      description: "测试创建支付记录"
+      scenarios:
+        - name: "使用保存的支付方式"
+          input:
+            orderId: "有效订单ID"
+            method: "CREDIT_CARD"
+            paymentMethodId: "有效支付方式ID"
+          expected: "成功创建支付记录，状态为PROCESSING"
+        - name: "使用临时支付信息"
+          input:
+            orderId: "有效订单ID"
+            method: "CREDIT_CARD"
+            paymentDetails: { /* 有效的支付详情 */ }
+          expected: "成功创建支付记录，状态为PROCESSING"
+        - name: "无效订单ID"
+          input:
+            orderId: "无效订单ID"
+            method: "CREDIT_CARD"
+            paymentMethodId: "有效支付方式ID"
+          expected: "返回错误:无效的订单ID"
+
+  integration_tests:
+    - name: "testPaymentFlow"
+      description: "测试完整支付流程"
+      scenarios:
+        - name: "成功支付流程"
+          steps:
+            - "创建订单"
+            - "创建支付记录"
+            - "模拟支付网关回调（成功）"
+            - "验证订单状态更新为PAID"
+        - name: "失败支付流程"
+          steps:
+            - "创建订单"
+            - "创建支付记录"
+            - "模拟支付网关回调（失败）"
+            - "验证支付状态更新为FAILED"
+            - "验证订单状态保持为PENDING"
+
+# ======== 模块文档 ========
+documentation:
+  sections:
+    - title: "支付模块概述"
+      content: "支付模块提供电子商务系统的支付处理功能，支持多种支付方式和退款处理。"
+    - title: "支付处理流程"
+      content: "详细说明支付从创建到完成的完整流程，包括状态转换和异常处理。"
+    - title: "支付网关集成"
+      content: "说明如何配置和使用不同的支付网关服务，如Stripe和PayPal。"
+    - title: "安全最佳实践"
+      content: "支付处理的安全最佳实践，包括数据加密、PCI合规和欺诈防护。"
+    - title: "API参考"
+      content: "支付模块API的详细说明，包括请求参数、响应格式和错误处理。"
